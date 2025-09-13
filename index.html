@@ -1,19 +1,4 @@
 <!doctype html>
-</div>
-</div>
-</div>
-
-
-<script>
-// --- Démo data ---
-const products = [
-{id:1,name:'Guide OpSec',description:"Techniques d’OpSec pour humains pressés.",image_url:'https://picsum.photos/seed/opsec/800/400',price_credits:8,link:'https://example.com/opsec.pdf'},
-{id:2,name:'Pack Icônes',description:'200 icônes minimalistes SVG.',image_url:'https://picsum.photos/seed/icons/800/400',price_credits:8,link:'https://example.com/icons.zip'},
-{id:3,name:'Template Site',description:'Starter HTML/Tailwind propre.',image_url:'https://picsum.photos/seed/template/800/400',price_credits:8,link:'https://example.com/template.zip'},
-];
-
-
-// --- i18n ---
 const i18n = {
 fr: { home:'Accueil', products:'Produits', topup:'Recharger', balance:'Solde', credits:'crédits', why_title:'Pourquoi cette boutique existe', why_text:'Mode démo activé : pas de crypto, juste pour tester l’interface. Chaque article coûte <strong>8 crédits</strong>.', products_title:'Articles à vendre', back:'Retour', hidden_label:'Contenu caché', price:'Prix', pay:'Payer', topup_title:'Recharger en crypto', demo_topup:'En mode démo, cette partie est désactivée.', confirm_title:"Confirmer l'achat", confirm_text:'Voulez-vous dépenser 8 crédits pour cet article ?', cancel:'Annuler', confirm:'Confirmer' },
 en: { home:'Home', products:'Products', topup:'Top up', balance:'Balance', credits:'credits', why_title:'Why this shop exists', why_text:'Demo mode: no crypto, just testing the UI. Each item costs <strong>8 credits</strong>.', products_title:'Items for sale', back:'Back', hidden_label:'Hidden Content', price:'Price', pay:'Pay', topup_title:'Top up with crypto', demo_topup:'In demo mode, this section is disabled.', confirm_title:'Confirm purchase', confirm_text:'Do you want to spend 8 credits for this item?', cancel:'Cancel', confirm:'Confirm' },
@@ -21,19 +6,17 @@ en: { home:'Home', products:'Products', topup:'Top up', balance:'Balance', credi
 let lang = localStorage.getItem('lang') || 'fr';
 
 
-function t(key){ return i18n[lang][key] || key; }
+function t(key){ return (i18n[lang] && i18n[lang][key]) || key; }
 function applyI18n(){
 document.querySelectorAll('[data-t]').forEach(el => {
 const k = el.getAttribute('data-t');
-const htmlKeys = new Set(['why_text']);
-if (htmlKeys.has(k)) el.innerHTML = t(k); else el.textContent = t(k);
+if (k === 'why_text') el.innerHTML = t(k); else el.textContent = t(k);
 });
 document.documentElement.lang = lang;
 document.getElementById('lang').value = lang;
 }
 
 
-// --- Helpers UI ---
 const $ = (id) => document.getElementById(id);
 function show(section){ ['section-home','section-products','section-topup','section-detail'].forEach(id => $(id).classList.add('hidden')); $(section).classList.remove('hidden'); }
 
@@ -47,8 +30,8 @@ card.innerHTML = `
 <img src="${p.image_url}" class="w-full h-40 object-cover" alt="${p.name}">
 <div class="p-4 space-y-2">
 <div class="font-semibold">${p.name}</div>
-<div class="text-sm text-slate-600 line-clamp-2">${p.description}</div>
-<a class="btn w-full mt-2" href="#/product/${p.id}">${t('pay').includes('Pay') ? 'View' : 'Voir'}</a>
+<div class="text-sm text-slate-600">${p.description}</div>
+<a class="btn w-full mt-2" href="#/product/${p.id}">${lang==='en'?'View':'Voir'}</a>
 </div>`;
 grid.appendChild(card);
 });
@@ -56,7 +39,7 @@ grid.appendChild(card);
 
 
 function renderDetail(id){
-const p = products.find(x => x.id === id);
+const p = products.find(x => x.id === Number(id));
 if (!p) { location.hash = '#/products'; return; }
 $('d-img').src = p.image_url; $('d-img').alt = p.name;
 $('d-title').textContent = p.name;
@@ -68,20 +51,20 @@ show('section-detail');
 }
 
 
-// --- Router (hash) ---
 function onRoute(){
 const hash = location.hash || '#/home';
-const [ , route, param ] = hash.split('/');
+const parts = hash.split('/');
+const route = parts[1] ? parts[1].replace('#','') : 'home';
+const param = parts[2];
 if (route === 'home') show('section-home');
 else if (route === 'products') { renderGrid(); show('section-products'); }
 else if (route === 'topup') show('section-topup');
-else if (route === 'product') renderDetail(Number(param));
+else if (route === 'product') renderDetail(param);
 else { location.hash = '#/home'; }
 }
 window.addEventListener('hashchange', onRoute);
 
 
-// --- Confirmation modal ---
 function openConfirm(onOk){
 $('confirm').classList.remove('hidden');
 const ok = () => { close(); onOk && onOk(); };
@@ -92,16 +75,15 @@ $('c-cancel').addEventListener('click', cancel);
 }
 
 
-// --- Events ---
 $('back').onclick = () => history.back();
 $('lang').onchange = (e) => { lang = e.target.value; localStorage.setItem('lang', lang); applyI18n(); renderGrid(); };
 
 
-// --- Init ---
 applyI18n();
-$('balance').textContent = 24; // démo
+$('balance').textContent = 24;
 if (!location.hash) location.hash = '#/home';
 onRoute();
+})();
 </script>
 </body>
 </html>
