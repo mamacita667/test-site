@@ -3,24 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Boutique Crypto (Démo)</title>
+  <title>Boutique Crypto</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-  body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-  .btn {
-    padding: 0.5rem 1rem;
-    border-radius: 1rem;          /* ≈ rounded-2xl */
-    border: 1px solid #cbd5e1;    /* slate-300 */
-    box-shadow: 0 1px 1px rgba(0,0,0,.05); /* shadow-sm */
-    background: #fff;
-  }
-  .btn:hover {
-    box-shadow: 0 4px 10px rgba(0,0,0,.08); /* hover:shadow */
-  }
-</style>
+  <style> body{font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;} .btn{ @apply px-4 py-2 rounded-2xl shadow-sm border border-slate-300 hover:shadow; } </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
   <div id="app" class="min-h-screen">
@@ -28,13 +16,19 @@
     <nav class="sticky top-0 z-50 bg-white/70 backdrop-blur border-b border-slate-200">
       <div class="max-w-6xl mx-auto flex items-center justify-between p-3">
         <div class="flex items-center gap-2">
-          <button id="btn-home" class="btn flex items-center gap-2"><span>🏠</span><span>Accueil</span></button>
-          <button id="btn-products" class="btn flex items-center gap-2"><span>🛒</span><span>Produits</span></button>
-          <button id="btn-topup" class="btn flex items-center gap-2"><span>💸</span><span>Recharger</span></button>
+          <button id="btn-home" class="btn flex items-center gap-2">
+            <span>🏠</span><span>Accueil</span>
+          </button>
+          <button id="btn-products" class="btn flex items-center gap-2">
+            <span>🛒</span><span>Produits</span>
+          </button>
+          <button id="btn-topup" class="btn flex items-center gap-2">
+            <span>💸</span><span>Recharger</span>
+          </button>
         </div>
         <div class="flex items-center gap-2">
-          <button id="btn-connect" class="btn">Mode démo</button>
-          <div class="px-3 py-2 rounded-2xl bg-slate-100 border border-slate-200 font-semibold">Solde: <span id="balance">24</span> crédits</div>
+          <button id="btn-connect" class="btn">Connecter wallet</button>
+          <div class="px-3 py-2 rounded-2xl bg-slate-100 border border-slate-200 font-semibold">Solde: <span id="balance">0</span> crédits</div>
         </div>
       </div>
     </nav>
@@ -44,7 +38,7 @@
       <!-- Accueil -->
       <section id="section-home" class="space-y-6">
         <h1 class="text-3xl font-bold">Pourquoi cette boutique existe</h1>
-        <p class="text-slate-700">Mode démo activé : pas de crypto, juste pour tester l’interface. Chaque article coûte <strong>8 crédits</strong>.</p>
+        <p class="text-slate-700">Tout se paie en crypto. Pas de CB, pas de drama. Chaque article coûte <strong>8 crédits</strong>. Recharge tes crédits, achète, et le lien secret se dévoile.</p>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <img class="w-full h-44 object-cover rounded-2xl border" src="https://picsum.photos/seed/a/800/400" alt="img1"/>
           <img class="w-full h-44 object-cover rounded-2xl border" src="https://picsum.photos/seed/b/800/400" alt="img2"/>
@@ -61,7 +55,12 @@
       <!-- Top-up -->
       <section id="section-topup" class="hidden max-w-md">
         <h2 class="text-2xl font-semibold mb-4">Recharger en crypto</h2>
-        <p class="text-slate-700">En mode démo, cette partie est désactivée.</p>
+        <form id="topup-form" class="space-y-3">
+          <label class="block text-sm">Nombre de crédits</label>
+          <input id="topup-credits" type="number" min="1" max="1000" value="8" class="w-full border rounded-xl px-3 py-2" />
+          <button class="btn w-full font-semibold">Créer un checkout sécurisé</button>
+          <p class="text-xs text-slate-600">Une fenêtre Coinbase Commerce s’ouvrira. Les crédits sont crédités après confirmation on-chain.</p>
+        </form>
       </section>
     </main>
   </div>
@@ -86,22 +85,51 @@
     </div>
   </div>
 
-  <script>
-    // --- Mode démo ---
-    const byId = (id) => document.getElementById(id);
-    let products = [
-      {id:1,name:'Guide OpSec',description:"Techniques d’OpSec pour humains pressés.",image_url:'https://picsum.photos/seed/opsec/400/300',price_credits:8,link:'https://example.com/opsec.pdf'},
-      {id:2,name:'Pack Icônes',description:'200 icônes minimalistes SVG.',image_url:'https://picsum.photos/seed/icons/400/300',price_credits:8,link:'https://example.com/icons.zip'},
-      {id:3,name:'Template Site',description:'Starter HTML/Tailwind propre.',image_url:'https://picsum.photos/seed/template/400/300',price_credits:8,link:'https://example.com/template.zip'},
-    ];
+  $1    // --- MODE DÉMO (sans backend) ---
+    const DEMO = new URLSearchParams(location.search).has('demo');
+$2const API = 'http://localhost:3000'; // backend
+    let csrf = null;
+    let me = null;
+    let products = [];
     let currentProduct = null;
+
+    const byId = (id) => document.getElementById(id);
 
     function show(section) {
       ['section-home','section-products','section-topup'].forEach(id => byId(id).classList.add('hidden'));
       byId(section).classList.remove('hidden');
     }
 
-    function loadProducts() {
+    async function getCsrf() {
+      if (DEMO) { csrf = 'demo'; return; }
+      const r = await fetch(API + '/api/health', { credentials: 'include' });
+      const j = await r.json(); csrf = j.csrf;
+    }
+
+    async function fetchMe() {
+      try {
+        if (DEMO) { me = { wallet: '0xdemo', credits: 24 }; byId('balance').textContent = me.credits; return; }
+        const r = await fetch(API + '/api/me', { credentials: 'include' });
+        if (!r.ok) throw new Error();
+        me = await r.json();
+        byId('balance').textContent = me.credits;
+      } catch {
+        me = null; byId('balance').textContent = '0';
+      }
+    }
+    }
+
+    async function loadProducts() {
+      if (DEMO) {
+        products = [
+          {id:1,name:'Guide OpSec',description:"Techniques d’OpSec pour humains pressés.",image_url:'https://picsum.photos/seed/opsec/400/300',price_credits:8},
+          {id:2,name:'Pack Icônes',description:'200 icônes minimalistes SVG.',image_url:'https://picsum.photos/seed/icons/400/300',price_credits:8},
+          {id:3,name:'Template Site',description:'Starter HTML/Tailwind propre.',image_url:'https://picsum.photos/seed/template/400/300',price_credits:8},
+        ];
+      } else {
+        const r = await fetch(API + '/api/products', { credentials: 'include' });
+        products = await r.json();
+      }
       const grid = byId('grid');
       grid.innerHTML = '';
       products.forEach(p => {
@@ -109,10 +137,10 @@
         card.className = 'rounded-2xl border bg-white overflow-hidden hover:shadow';
         card.innerHTML = `
           <img src="${p.image_url}" class="w-full h-40 object-cover" alt="${p.name}">
-          <div class="p-4 space-y-2">
-            <div class="font-semibold">${p.name}</div>
-            <div class="text-sm text-slate-600 line-clamp-2">${p.description}</div>
-            <button class="btn w-full mt-2" data-id="${p.id}">Voir</button>
+          <div class=\"p-4 space-y-2\">
+            <div class=\"font-semibold\">${p.name}</div>
+            <div class=\"text-sm text-slate-600 line-clamp-2\">${p.description}</div>
+            <button class=\"btn w-full mt-2\" data-id=\"${p.id}\">Voir</button>
           </div>`;
         grid.appendChild(card);
       });
@@ -130,22 +158,94 @@
       byId('modal').classList.remove('hidden');
     }
 
-    function buyCurrent() {
+    async function buyCurrent() {
       if (!currentProduct) return;
-      byId('reveal-link').href = currentProduct.link;
-      byId('reveal-link').textContent = currentProduct.link;
+      if (DEMO) {
+        byId('reveal-link').href = 'https://example.com/secret/demo';
+        byId('reveal-link').textContent = 'https://example.com/secret/demo';
+        byId('reveal').classList.remove('hidden');
+        return;
+      }
+      if (!me) { alert('Connecte ton wallet d\'abord.'); return; }
+      const r = await fetch(API + '/api/purchase', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+        body: JSON.stringify({ productId: currentProduct.id })
+      });
+      const j = await r.json();
+      if (!r.ok) { alert(j.error || 'Echec paiement'); return; }
+      byId('reveal-link').href = j.revealedLink; byId('reveal-link').textContent = j.revealedLink;
       byId('reveal').classList.remove('hidden');
+      await fetchMe();
+    }
+      const r = await fetch(API + '/api/purchase', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+        body: JSON.stringify({ productId: currentProduct.id })
+      });
+      const j = await r.json();
+      if (!r.ok) { alert(j.error || 'Echec paiement'); return; }
+      byId('reveal-link').href = j.revealedLink; byId('reveal-link').textContent = j.revealedLink;
+      byId('reveal').classList.remove('hidden');
+      await fetchMe();
     }
 
-    // Events
+    async function createCheckout(e) {
+      e.preventDefault();
+      if (DEMO) { alert('Mode démo: pas de top-up.'); return; }
+      if (!me) { alert('Connecte ton wallet d\'abord.'); return; }
+      const credits = Number(byId('topup-credits').value || '0');
+      const r = await fetch(API + '/api/topup/create-checkout', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+        body: JSON.stringify({ credits })
+      });
+      const j = await r.json();
+      if (!r.ok) { alert(j.error || 'Échec checkout'); return; }
+      window.open(j.hosted_url, '_blank');
+      alert('Après confirmation on-chain, les crédits seront ajoutés. Rafraîchis le solde dans quelques minutes.');
+    }
+
+    // SIWE minimal (navigateur) — nécessite un wallet injecté (ex: MetaMask)
+    async function connectWallet() {
+      if (DEMO) { alert('Mode démo: aucune connexion wallet requise.'); return; }
+      if (!window.ethereum) { alert('Installe un wallet (MetaMask par ex.).'); return; }
+      const [addr] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      await getCsrf();
+      const nonceRes = await fetch(API + '/api/auth/nonce', { credentials: 'include' });
+      const { nonce } = await nonceRes.json();
+      const domain = window.location.host;
+      const origin = window.location.origin;
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      const message = new SiweMessage({
+        domain, address: addr, statement: 'Connexion à la boutique en toute sobriété.', uri: origin, version: '1', chainId: parseInt(chainId, 16), nonce
+      }).prepareMessage();
+      const signature = await window.ethereum.request({ method: 'personal_sign', params: [message, addr] });
+      const r = await fetch(API + '/api/auth/verify', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+        body: JSON.stringify({ message, signature })
+      });
+      if (r.ok) { await fetchMe(); alert('Connecté.'); } else { alert('Échec connexion.'); }
+    }
+
+    // Lightweight SIWE client
+    class SiweMessage { constructor(p){Object.assign(this,p)} prepareMessage(){return `\n${this.domain} veut vous connecter\n\nAdresse: ${this.address}\nDéclaration: ${this.statement}\nURI: ${this.uri}\nVersion: ${this.version}\nChaîne: ${this.chainId}\nNonce: ${this.nonce}\n`;}};
+
+    // Events UI
     byId('btn-home').onclick = () => show('section-home');
     byId('btn-products').onclick = () => { show('section-products'); loadProducts(); };
     byId('btn-topup').onclick = () => { show('section-topup'); };
+    byId('btn-connect').onclick = connectWallet;
     byId('btn-buy').onclick = buyCurrent;
     byId('modal-close').onclick = () => byId('modal').classList.add('hidden');
+    byId('topup-form').addEventListener('submit', createCheckout);
 
     // Init
-    loadProducts();
+    (async () => {
+      await getCsrf();
+      await fetchMe();
+      await loadProducts();
+      if (DEMO) {
+        byId('btn-connect').textContent = 'Mode démo';
+      }
+    })();
   </script>
 </body>
 </html>
