@@ -1,3 +1,105 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>test</title></head>
-<body><h1>OK GitHub Pages</h1></body></html>
+byId('modal-title').textContent = p.name;
+byId('modal-img').src = p.image_url; byId('modal-img').alt = p.name;
+byId('modal-desc').textContent = p.description;
+byId('reveal').classList.add('hidden');
+byId('modal').classList.remove('hidden');
+}
+
+
+async function buyCurrent() {
+if (!currentProduct) return;
+if (DEMO) {
+byId('reveal-link').href = 'https://example.com/secret/demo';
+byId('reveal-link').textContent = 'https://example.com/secret/demo';
+byId('reveal').classList.remove('hidden');
+return;
+}
+if (!me) { alert('Connecte ton wallet d\'abord.'); return; }
+const r = await fetch(API + '/api/purchase', {
+method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+body: JSON.stringify({ productId: currentProduct.id })
+});
+const j = await r.json();
+if (!r.ok) { alert(j.error || 'Echec paiement'); return; }
+byId('reveal-link').href = j.revealedLink; byId('reveal-link').textContent = j.revealedLink;
+byId('reveal').classList.remove('hidden');
+await fetchMe();
+}
+const r = await fetch(API + '/api/purchase', {
+method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+body: JSON.stringify({ productId: currentProduct.id })
+});
+const j = await r.json();
+if (!r.ok) { alert(j.error || 'Echec paiement'); return; }
+byId('reveal-link').href = j.revealedLink; byId('reveal-link').textContent = j.revealedLink;
+byId('reveal').classList.remove('hidden');
+await fetchMe();
+}
+
+
+async function createCheckout(e) {
+e.preventDefault();
+if (DEMO) { alert('Mode démo: pas de top-up.'); return; }
+if (!me) { alert('Connecte ton wallet d\'abord.'); return; }
+const credits = Number(byId('topup-credits').value || '0');
+const r = await fetch(API + '/api/topup/create-checkout', {
+method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+body: JSON.stringify({ credits })
+});
+const j = await r.json();
+if (!r.ok) { alert(j.error || 'Échec checkout'); return; }
+window.open(j.hosted_url, '_blank');
+alert('Après confirmation on-chain, les crédits seront ajoutés. Rafraîchis le solde dans quelques minutes.');
+}
+
+
+// SIWE minimal (navigateur) — nécessite un wallet injecté (ex: MetaMask)
+async function connectWallet() {
+if (DEMO) { alert('Mode démo: aucune connexion wallet requise.'); return; }
+if (!window.ethereum) { alert('Installe un wallet (MetaMask par ex.).'); return; }
+const [addr] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+await getCsrf();
+const nonceRes = await fetch(API + '/api/auth/nonce', { credentials: 'include' });
+const { nonce } = await nonceRes.json();
+const domain = window.location.host;
+const origin = window.location.origin;
+const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+const message = new SiweMessage({
+domain, address: addr, statement: 'Connexion à la boutique en toute sobriété.', uri: origin, version: '1', chainId: parseInt(chainId, 16), nonce
+}).prepareMessage();
+const signature = await window.ethereum.request({ method: 'personal_sign', params: [message, addr] });
+const r = await fetch(API + '/api/auth/verify', {
+method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+body: JSON.stringify({ message, signature })
+});
+if (r.ok) { await fetchMe(); alert('Connecté.'); } else { alert('Échec connexion.'); }
+}
+
+
+// Lightweight SIWE client
+class SiweMessage { constructor(p){Object.assign(this,p)} prepareMessage(){return `\n${this.domain} veut vous connecter\n\nAdresse: ${this.address}\nDéclaration: ${this.statement}\nURI: ${this.uri}\nVersion: ${this.version}\nChaîne: ${this.chainId}\nNonce: ${this.nonce}\n`;}};
+
+
+// Events UI
+byId('btn-home').onclick = () => show('section-home');
+byId('btn-products').onclick = () => { show('section-products'); loadProducts(); };
+byId('btn-topup').onclick = () => { show('section-topup'); };
+byId('btn-connect').onclick = connectWallet;
+byId('btn-buy').onclick = buyCurrent;
+byId('modal-close').onclick = () => byId('modal').classList.add('hidden');
+byId('topup-form').addEventListener('submit', createCheckout);
+
+
+// Init
+(async () => {
+await getCsrf();
+await fetchMe();
+await loadProducts();
+if (DEMO) {
+byId('btn-connect').textContent = 'Mode démo';
+}
+})();
+</script>
+</body>
+</html>
